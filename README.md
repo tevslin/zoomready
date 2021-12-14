@@ -52,7 +52,7 @@ Unlike Ookla's speedtest CLI, Cloudflare does not require downloading a licensed
 
 ## Bug reports and suggestions for improvement
 
-Pleas click 
+Please click [here](https://github.com/tevslin/zoomready/issues) amd leave your feedback.
 
 ## Privacy
 
