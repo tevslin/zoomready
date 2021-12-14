@@ -8,7 +8,7 @@ Beta release of free app to determine and track the quality of your internet con
 4. determine whether a hotel connection or other temporary connection is good enough for teleconferencing
 
 ## Description
-Adesktop app designed to be run continuously to monitor the quality of your Internet connection. Tracks current and average latency, jitter, and speed up and down. Indicator lights show suitability for teleconferencing. Latency must be less than 75 ms (milliseconds), jitter less than 15 ms, download speed more than 5Mbps (megabits per second), and upload more than 3Mbps to be considered fully zoomready (green). If these criteria are not met but latency is less 100ms, jitter less than 25ms, download faster than 2Mbps, and upload more than 1Mbps, the zoomready status is "iffy" (yellow). Anything else including inability to connect is status red - not usable for teleconferencing. You will usually find yourself freezing on Zoom and other teleconferencing platforms if your zoomready status is red.
+A desktop app designed to be run continuously to monitor the quality of your Internet connection. Tracks current and average latency, jitter, and speed up and down. Indicator lights show suitability for teleconferencing. Latency must be less than 75 ms (milliseconds), jitter less than 15 ms, download speed more than 5Mbps (megabits per second), and upload more than 3Mbps to be considered fully zoomready (green). If these criteria are not met but latency is less 100ms, jitter less than 25ms, download faster than 2Mbps, and upload more than 1Mbps, the zoomready status is "iffy" (yellow). Anything else including inability to connect is status red - not usable for teleconferencing. You will usually find yourself freezing on Zoom and other teleconferencing platforms if your zoomready status is red.
 
 ## Installation
 
@@ -52,7 +52,7 @@ Unlike Ookla's speedtest CLI, Cloudflare does not require downloading a licensed
 
 ## Bug reports and suggestions for improvement
 
-Please click [here](https://github.com/tevslin/zoomready/issues) amd leave your feedback.
+Please click [here](https://github.com/tevslin/zoomready/issues) and leave your feedback on Github.
 
 ## Privacy
 
