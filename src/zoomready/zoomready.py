@@ -4,7 +4,7 @@ Created on Sat Nov 13 09:49:24 2021
 
 @author: tevsl
 """
-version="0.0.5"
+version="0.0.6"
 
 import tkinter as tk
 from tkinter import ttk
@@ -356,7 +356,7 @@ def getisp():   #gets data for isp and exits if no ip connection
     blob=psutil.net_if_stats()
     blob=[key for key in blob.keys() if blob[key].isup ] #look for adapters which are up
     #code below is windows specific
-    if 'Ethernet' in blob:  #favor ethernet if there. could etst furthr by getting byte counts and see if they change
+    if 'Ethernet' in blob:  #favor ethernet if there. could test furthr by getting byte counts and see if they change
         ctype='Ethernet'
     elif 'Wi-Fi' in blob:
         ctype='WiFi'
@@ -401,7 +401,11 @@ pingqs=[[] for i in range(len(pingtasks))]
 pingdict={"task":do_ping,"interval":1,"timeout":.200,"results":[],"conseq":0,"resultlim":12,
           "lastgood":0,"initializing":True}  # will come from preferences
 pingdict["script"]=maketaskarray(pingtasks) #add scripts and output array
-featuredict={'ping':pingdict,"speeddown":makespeeddict(cf.downloadtests,'down'),'speedup':makespeeddict(cf.uploadtests,'up')}    
+uploadtests=((101000,8,'100kB'),(1001000, 6,'1MB'),(10001000, 4,'10MB'))
+downloadtests=((101000, 10,'100kB'),(1001000, 8,'1MB'),(10001000, 6,'10MB'),(25001000, 4,'25MB'))
+
+
+featuredict={'ping':pingdict,"speeddown":makespeeddict(cf.downloadtests,'down'),'speedup':makespeeddict(uploadtests,'up')}    
 
 thequeue=[] #revolving q of tasks to schedule
 for feature, dictionary in featuredict.items():    #create a queue and thread for each feature
