@@ -13,6 +13,8 @@ import numpy as np
 import time
 import operator
 import psutil
+from datetime import timedelta
+import webbrowser  
 import warnings
 warnings.filterwarnings("ignore")
 import ping3
@@ -24,36 +26,68 @@ from cloudflarepycli import cloudflareclass
 class statusblock:  #keeps track of a performance dimension
     lastvalue=-1 #don't want match   
     lasttime=-1
-    lastlevel=2 #assume good to start
+    
     total=0
     count=0
-    maxi=0
-    mini=0
-    q=[]
+
+
+    duration=3600 #work in hours
     #stype=np.dtype([('time',np.float),('level',np.int16)])  
-    def __init__(self,theop,duration=0,levels=()):
+    def __init__(self,theop,duration=3600,levels=(),widget=None,exit=None):
         self.theop=theop
         self.levels=levels
         self.duration=duration
+        self.widget=widget
+        self.exit=exit
+        self.q=[]
+        self.tq=[] #can't slice q the way I want
+        self.lastlevel=len(colorset)-1 #assume good to start
        
-    def updateavg(self,value):
-        now=time.time()
-        nochange=value==self.lastvalue
-        self.lastvalue=value
-        self.lasttime=now
-        self.total+=value
-        self.count+=1
-        self.maxi=max(self.maxi,value)
-        self.mini=min(self.mini,value)
-        if self.duration>0: #if we're doing an interval
-            if nochange:    #if there hasn't been a change
-                self.q.pop(-1) #get rid of redundant entry
-            self.q.append((value,now))                          
-            while self.q[0][1]-now>self.duration:   #pop old entries
-                self.q.pop(0)
-        if not nochange: 
-            updatestatus()
+    def updateentries(self,value): #renamed 12/18
+    #updates entry and average as well as any visible fields in window
+        if value>-1: #minus = no update += used to update display
+            now=time.time()
+            self.lastvalue=value
+            self.lasttime=now
+            self.total+=value
+            if self.count==0:
+                self.maxi=value
+                self.mini=value            
+            self.count+=1
+            self.maxi=max(self.maxi,value)
+            self.mini=min(self.mini,value)
+            if self.duration>0: #if we're doing an interval 
+                self.q.append(value)
+                self.tq.append(now)                          
+    
+        if self.theop == operator.le or self.theop==operator.lt:
+            if len(self.q)>0:
+                hnadir=np.max(self.q)
+            else:
+                hnadir=0
+            nadir=self.maxi
+        else:
+            hnadir=np.min(self.q)
+            nadir=self.mini
+            
+        values=[value,0 if len(self.q)==0 else np.mean(self.q),hnadir,self.total/self.count,nadir]
+        for i,suffix in enumerate(suffi):
+            if values[i]>-1:    #if value really there
+                if suffix in ["cur","lhnadir","nadir"]: #if current or nadir
+                    lastlevel=self.getlevel(values[i])
+                    background=colorset[lastlevel]
+                    if suffix=='cur':   #if current last level
+                        self.lastlevel=lastlevel #remember it
+                else: #if average
+                    background=None #it doesn't have a color
+                if not self.widget is None:  #if it has a widget
+                    if self.exit is None: #if no exit
+                        mw.setvar(self.widget+suffix,"{:4.1f}".format(values[i]),background=background)
+                    else:
+                        thevalue,background=self.exit(values[i],suffix)
+                        mw.setvar(self.widget+suffix,thevalue,background=background)
         return (self.total/self.count)
+    
     def getlevel(self,value): #get the level for a value
         if self.lasttime<0: #if hasn't happened yet
             return(self.lastlevel) #give it a pass
@@ -73,41 +107,58 @@ class mainwindow:
         self.root.title(title+' '+version)
         self.frm = ttk.Frame(self.root, padding=10)
         self.canvas=tk.Canvas(self.root)
-        self.row=-1 #current row
-        self.column=0 #current column
+
         self.callafter=callafter
         self.aftertime=aftertime
         self.doingafter=None
         self.dict={}
         
-    def addpair(self,label,vname=None,vinit='N/A',newrow=True):
+    def getnextpos(self,base,newrow): #gets the next row and column position in frame
+        if base is None: #if in main window
+            thebase=self.frm
+        else:
+            thebase=base
+        try:
+            info=thebase.winfo_children()[-1].grid_info()
+        except IndexError:  #frame has no widgets
+            return(thebase,0,0)
+        row=info['row']+(info['rowspan'] if newrow else 0)
+        column=0 if newrow else (info['column']+info['columnspan'])
+        return thebase,row,column
         
-        if newrow:
-            self.row+=1
-            self.column=0      
-        ttk.Label (self.frm,text=label).grid(column=self.column,row=self.row,sticky='e')
+    def addpair(self,label,vname=None,vinit='N/A',newrow=True,base=None):
+
+        thebase,row,column=self.getnextpos(base,newrow)
+
+        ttk.Label (thebase,text=label).grid(row=row,column=column,sticky='e')
         if vname is None: #if just another constant
-            ttk.Label (self.frm,text=vinit).grid(column=self.column+1,row=self.row)
-        else:
-            strvar=tk.StringVar(self.root,vinit,name=vname)
-            self.dict[vname]=strvar
-            ttk.Label(self.frm,textvariable=strvar).grid(column=self.column+1,row=self.row)
-        self.column+=2
+            ttk.Label (thebase,text=vinit).grid(row=row,column=column+1)
+        else:            
+            self.dict[vname]=ttk.Label(thebase,text=vinit)
+            self.dict[vname].grid(row=row,column=column+1)
+
+        #self.column+=2
         
-    def addbutton(self,vinit,command,vname=None,newrow=True,column=None):      
+    def addrow(self,label,vinit='N/A',base=None):
+        thebase,row,column=self.getnextpos(base,True)
+        ttk.Label (thebase,text=label).grid(column=0,sticky='e')
+        for i,suffix in enumerate(suffi):
+            self.dict[label+suffix]=ttk.Label(thebase,text=vinit)
+            self.dict[label+suffix].grid(column=1+i,row=row)
+            
+                
         
-        if newrow:
-            self.row+=1
-            self.column=0
-        if not column is None: #if clomn specified
-            self.column=column
+    def addbutton(self,vinit,command,vname=None,newrow=True,col=None,base=None):      
+        thebase,row,column=self.getnextpos(base,newrow)
+
+        if not col is None: #if column specified
+            column=col
         if vname is None: #if not variable text
-            ttk.Button(self.frm,text=vinit,command=command).grid(column=self.column,row=self.row)
+            ttk.Button(thebase,text=vinit,command=command).grid(column=column,row=row)
         else:
-            strvar=tk.StringVar(self.root,vinit)
-            self.dict[vname]=strvar
-            ttk.Button(self.frm,textvariable=strvar,command=command).grid(column=self.column,row=self.row)
-        self.column+=1
+            self.dict[vname]=ttk.Button(thebase,text=vinit,command=command)
+            self.dict[vname].grid(column=column,row=row)
+        #self.column+=1
         
     def doafter(self,aftertime=None,callafter=None):
         if aftertime is None:
@@ -122,8 +173,8 @@ class mainwindow:
     def cancel(self):
         self.root.after_cancel(self.doingafter)
         
-    def setvar(self,name,value):
-        self.dict[name].set(value)
+    def setvar(self,name,value,background=None):
+        self.dict[name].config(text=value,background=background) #changed 12/18 to do bg as well as text
 
 
 def circlist(thelist,theitem,maxlength):
@@ -133,7 +184,7 @@ def circlist(thelist,theitem,maxlength):
         thelist.pop(0)
 
 def getduration(oldtime):
-    from datetime import timedelta  
+    
     elapsed=timedelta(seconds=round(time.time()-oldtime))
     return str(elapsed)
         
@@ -143,31 +194,34 @@ def goodresult(curtask,index,ms):
     curtask['results'].append({"time":curtask['lastgood'],"index":index,"ms":ms}) #put it on the list
     circlist(curtask["results"],{"time":curtask['lastgood'],"index":index,"ms":ms},curtask['resultlim'])
 
+    
+def statusexit(value,suffix):
+        
+    if suffix in ["cur","lhnadir","nadir"]: #if current or nadir
+        index=int(np.floor(value))
+        color=colorset[index]
+        if color=='':
+            color='green' #status is special
+        return(textset[index],color)
+    
+    return("{:2.2f}".format(value),None)       
+    
 def updatestatus(): #updates color bar and message
-    colorset=('red','yellow','green')
-    textset=('not zoomready','iffy','zoomready')
-    if failstart>0: #if in failure
-        color="red"
-        thetext='no connection'
-        minstatus=0
+    expgroup=statusgroup+(avgstatus,)
+    for entry in expgroup: #timeout the qs
+        pop=False
+        while len(entry.q)>0 and entry.tq[0]+3600<time.time():
+            entry.q.pop(0)
+            entry.tq.pop(0)
+            pop=True
+        if pop: #if anything changed
+            entry.updateentries(-1) #update display
+    if failstart>0: #if in an outage
+        minstatus=0 #red alarm
     else:
-        minstatus=np.min([block.getlevel(block.lastvalue) for block in statusgroup ])
-        color=colorset[minstatus]
-        thetext=textset[minstatus]
-        if possfailstart>0: #if in a glitch
-            thetext+='-glitch' #should do something with color
+        minstatus=np.min([block.lastlevel for block in statusgroup ]) #changed 12/18
+    avgstatus.updateentries(minstatus)
 
-            
-    curstat.configure(text=thetext,background=color)
-
-    avgstatus.updateavg(minstatus)
-    minstatus=int(np.min([item[0] for item in avgstatus.q]))
-    hourstat.configure(text=textset[minstatus],background=colorset[minstatus])
-    
-    
-    
-    
-    
     
 def do_ping(curtask,index):
       
@@ -197,35 +251,35 @@ def do_ping(curtask,index):
     if returncode==0:  #if it succeeded
         possfailstart=0
         if failstart>0: #if we were in a failure
-            mw.setvar("duration",getduration(failstart))
-            mw.setvar("avgduration","{:5.2f}".format(avgduration.updateavg(time.time()-failstart)))
+            
+            failures.updateentries(time.time()-failstart) #this is the final duration
+            
             failstart=0 #we're not failing any more
-            
-            lastfailend=time.time()
-            
+            failures.lastvalue=0
+            failures.lastlevel=len(colorset) #clean up level
+            mw.setvar('failure durationcur','N/A',background='')
+            lastfailend=time.time()          
         if lastfailend>0:
             x=getduration(lastfailend)
-            mw.setvar("lastfail",x)        
-
+            mw.setvar("lastfail",x,background='')        
+            mw.setvar('lasthour',len(failures.q))
         if ms>0:   #if could find time  
-           # ms=int(thetime)
+           
             goodresult(curtask,index,ms)
             if len(curtask['results'])>=pingmin: #if have enough samples
                 relresults=curtask["results"][-pingmin:]
                 x=np.mean([res['ms'] for res in relresults])
-                mw.setvar('latency',"{:4.1f}".format(x))
-                mw.setvar('avglatency',"{:5.2f}".format(avglatency.updateavg(x)))
-                
+                avglatency.updateentries(x) 
                 
             # now work on jitter
                
                 circlist(pingqs[index],ms,jittermin+1) #put the time at the bottom of the q
                 if len(pingqs[index])>1: # if there's anything else on the list
                     pingqs[index][-2]=abs(pingqs[index][-2]-pingqs[index][-1]) #turn it into jitter
-                    jit=np.mean([np.median(q) for q in pingqs[:-1] if len(q)>=5])
+                    jit=np.mean([np.median(q) for q in pingqs[:-1] if len(q)>=jittermin])
                     if not np.isnan(jit): #if enough to calculate
-                        mw.setvar("jitter","{:4.1f}".format(jit))
-                        mw.setvar("avgjitter","{:5.2f}".format(avgjitter.updateavg(jit)))
+                        avgjitter.updateentries(jit)
+
                     
     else:   #if ping failed
         print ('ping fail',index,time.time())
@@ -238,13 +292,12 @@ def do_ping(curtask,index):
         if pingfailmax<faillength: #if we reached limit of our patience
             if not failstart>0: #if not already in outage
                 print ('now in outage')
-                failstart=possfailstart
-                
-                mw.setvar("lastfail",'now')
+                failstart=possfailstart             
+                mw.setvar("lastfail",'now',background='red')
                 failcount+=1
-                mw.setvar("failcount",failcount)
-            else:
-                mw.setvar("duration",getduration(failstart))
+                mw.setvar("totfailcount",failcount)
+            mw.setvar("failure durationcur",getduration(failstart),background='red')
+            avgstatus.updateentries(0) #report the failure
         
     return(True) #always advance index
                 
@@ -266,7 +319,11 @@ def dospeed(curtask,index):
             curtask['initializing']=False #turn off iniialization
     if not curtask['initializing']: #if not in itialization
         speed=round(np.percentile(curtask['speeds'],thepercentile)/1e6,2)
-        mw.setvar('speed'+curtask['direction'],str(speed))
+        if curtask['direction']=='up': #12/18
+            avgup.updateentries(speed)
+        else:
+            avgdown.updateentries(speed)
+
     return(True)
     
 
@@ -295,8 +352,7 @@ def makespeeddict(functasks,direction):
     dict["initializing"]=True
     return dict
     
-    
-       
+
 
 def checkstatus():
     
@@ -314,7 +370,7 @@ def checkstatus():
                     task["last"]=time.time() #remember when               
                     thequeue.append(thequeue.pop(0)) #move to back of queue
                     break
-    updatestatus()
+        updatestatus()
     mw.doafter() #set next iteration
     
 #button processor
@@ -338,6 +394,10 @@ def pausetoggle():  #action for pause button
     else: #if not paused
         pausesw=True
         mw.setvar("pausebutton","Resume")
+        
+def loadhelp(): #action for help button
+    webbrowser.open('https://github.com/tevslin/zoomready/blob/main/README.md')
+
 
 def getisp():   #gets data for isp and exits if no ip connection
     gotit=False
@@ -354,11 +414,11 @@ def getisp():   #gets data for isp and exits if no ip connection
     mw.setvar('isp',isp)
     mw.setvar('IP',ip)
     blob=psutil.net_if_stats()
-    blob=[key for key in blob.keys() if blob[key].isup ] #look for adapters which are up
+    blob=[key[0:3] for key in blob.keys() if blob[key].isup ] #look for adapters which are up
     #code below is windows specific
-    if 'Ethernet' in blob:  #favor ethernet if there. could test furthr by getting byte counts and see if they change
+    if 'Eth' in blob or 'eth' in blob:  #favor ethernet if there. could test furthr by getting byte counts and see if they change
         ctype='Ethernet'
-    elif 'Wi-Fi' in blob:
+    elif 'Wi-' in blob or 'wla' in blob:
         ctype='WiFi'
     else:
         ctype='unknown'
@@ -376,6 +436,9 @@ except:
 
 speedtestinterval=15  #should come from preferance. time in minutes for full set of type of speedtest
 thepercentile=90
+colorset=('red','orange','yellow','')
+textset=('not connected','not zoomready','iffy','zoomready')
+suffi=("cur","lhavg","lhnadir","avg","nadir")
 
 
 killsw=False
@@ -386,13 +449,15 @@ failcount=0
 lastfailend=0
 hourstat=0
 avgduration=statusblock(theop=operator.lt)
-avglatency=statusblock(theop=operator.lt,levels=(75,100))
-avgjitter=statusblock(theop=operator.lt,levels=(15,25))
-avgdown=statusblock(theop=operator.gt,levels=(5,2))
-avgup=statusblock(theop=operator.gt,levels=(3,1))
-statusgroup=(avglatency,avgjitter,avgdown,avgup)
+avglatency=statusblock(theop=operator.lt,levels=(75,100,1000),widget='latency')
+avgjitter=statusblock(theop=operator.lt,levels=(15,25,1000),widget='jitter')
+avgdown=statusblock(theop=operator.gt,levels=(5,2,0),widget='speed down')
+avgup=statusblock(theop=operator.gt,levels=(3,1,0),widget='speed up')
+failures=statusblock(theop=operator.le,levels=(0,1,1),widget='failure duration')
+statusgroup=(avglatency,avgjitter,avgdown,avgup,failures)
 
-avgstatus=statusblock(theop=operator.le,levels=(5,3,2,1),duration=3600)
+avgstatus=statusblock(theop=operator.ge,levels=(2,1,0),exit=statusexit,widget='status')
+failurecount=statusblock(theop=operator.le) #only used for tracking failure counts
 cf =cloudflareclass.cloudflare(printit=False)
 
 pingtasks=[('8.8.8.8',1),('1.1.1.1',1),('208.67.222.222',1)] #locations to ping and weighting
@@ -418,35 +483,41 @@ buttonignore=True #because buttons call their code during setup
 mw=mainwindow(checkstatus,200)   #create the window
 
 
-mw.addpair('started ',vinit=time.asctime())
-mw.addpair('ISP:',"isp")
-mw.addpair('Connection:','conn',newrow=False)
-mw.addpair("IP address","IP")
-mw.addpair('time since failure:','lastfail')
-mw.addpair('failure count:','failcount',vinit=str(0),newrow=False)
-mw.addpair('last failure duration:','duration')
-mw.addpair('average:','avgduration',newrow=False)
-mw.addpair ('current latency in ms:',"latency")
-mw.addpair ("average:","avglatency",newrow=False)
-mw.addpair ('current jitter in ms:',"jitter")
-mw.addpair ("average:","avgjitter",newrow=False)
-mw.addpair("speed down in Mbps:","speeddown")
-mw.addpair ("speed up:","speedup",newrow=False)
-mw.addbutton("Pause",pausetoggle,vname="pausebutton")
-mw.addbutton("Quit",killall,newrow=False,column=3)
-ttk.Label (mw.canvas,text='current status').grid(column=0)
-ttk.Label(mw.canvas,text='last hour minimum status').grid(row=0,column=3,sticky="e")
-curstat=ttk.Label(mw.canvas,text='N/A')
-curstat.grid(row=1,column=0)
-hourstat=ttk.Label(mw.canvas,text='N/A')
-hourstat.grid(row=1,column=3)
 
 
-mw.canvas.grid(rowspan=4)
+mw.addpair('time since failure:','lastfail',base=mw.canvas)
+mw.addpair('last hour failures:','lasthour',vinit=str(0),newrow=False,base=mw.canvas)
+mw.addpair('total failures:','totfailcount',vinit=str(0),newrow=False,base=mw.canvas)
+mw.addpair('ISP:',"isp",base=mw.canvas)
+mw.addpair('Connection:','conn',newrow=False,base=mw.canvas)
+mw.addpair("IP address","IP",newrow=False,base=mw.canvas)
+base,row,column=mw.getnextpos(mw.frm,True)
+ttk.Label(base,text='current').grid(row=row,column=1)
+ttk.Label(base,text='last hour').grid(row=row,column=2,columnspan=2)
+ttk.Label(base,text='since '+time.strftime('%m/%d %H:%M')).grid(row=row,column=4,columnspan=2)
+row+=1
+ttk.Label(mw.frm,text='average').grid(row=row,column=2)
+ttk.Label(mw.frm,text='worst').grid(row=row,column=3)
+ttk.Label(mw.frm,text='average').grid(row=row,column=4)
+ttk.Label(mw.frm,text='worst').grid(row=row,column=5)
+mw.addrow('status')
+mw.addrow("latency")
+mw.addrow('jitter')
+mw.addrow("speed down")
+mw.addrow("speed up")
+mw.addrow('failure duration')
+
+mw.addbutton('Help',loadhelp,base=mw.canvas)
+mw.addbutton("Pause",pausetoggle,vname="pausebutton",newrow=False,col=2,base=mw.canvas)
+mw.addbutton("Quit",killall,newrow=False,col=4,base=mw.canvas)
+
+
 mw.frm.grid()
+mw.canvas.grid(rowspan=6)
+
 
 buttonignore=False #now buttons are good to go
-mw.doafter(aftertime=0,callafter=getisp) #get isp infor before real start to test internet connection
+mw.doafter(aftertime=0,callafter=getisp) #get isp info before real start to test internet connection
 mw.mainloop()
 
 print('goodbye')
