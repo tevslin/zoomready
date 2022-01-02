@@ -4,7 +4,7 @@ Created on Sat Nov 13 09:49:24 2021
 
 @author: tevsl
 """
-version="0.0.6"
+version="1.0.0"
 
 import tkinter as tk
 from tkinter import ttk
@@ -14,14 +14,16 @@ import time
 import operator
 import psutil
 from datetime import timedelta
-import webbrowser  
+import webbrowser
+import sys
+import os  
 import warnings
 warnings.filterwarnings("ignore")
 import ping3
 ping3.EXCEPTIONS = True
 from cloudflarepycli import cloudflareclass
 
-######## Note ping3 does not work in user mode in rasperian
+######## Note ping3 does not work in user mode in raspberian
     
 class statusblock:  #keeps track of a performance dimension
     lastvalue=-1 #don't want match   
@@ -105,9 +107,12 @@ class mainwindow:
        
         self.root = tk.Tk()
         self.root.title(title+' '+version)
+        try:
+            self.root.iconbitmap('theicon.ico')
+        except Exception:
+            self.root.iconbitmap(os.path.join(sys._MEIPASS,'theicon.ico'))
         self.frm = ttk.Frame(self.root, padding=10)
         self.canvas=tk.Canvas(self.root)
-
         self.callafter=callafter
         self.aftertime=aftertime
         self.doingafter=None
@@ -142,9 +147,12 @@ class mainwindow:
     def addrow(self,label,vinit='N/A',base=None):
         thebase,row,column=self.getnextpos(base,True)
         ttk.Label (thebase,text=label).grid(column=0,sticky='e')
+        skip=0 #for column skipping
         for i,suffix in enumerate(suffi):
             self.dict[label+suffix]=ttk.Label(thebase,text=vinit)
-            self.dict[label+suffix].grid(column=1+i,row=row)
+            self.dict[label+suffix].grid(column=1+i+skip,row=row)
+            if 2+i+skip in sepcols: #if next column should be skipped
+                skip+=1 #set it up
             
                 
         
@@ -391,9 +399,13 @@ def pausetoggle():  #action for pause button
     if pausesw: #if already paused
         pausesw=False #resume
         mw.setvar("pausebutton","Pause")
+        #mw.dict['statuscur'].grid()
+        #print(mw.dict['statuscur']._glop)
     else: #if not paused
         pausesw=True
         mw.setvar("pausebutton","Resume")
+        #mw.dict['statuscur'].grid_remove()
+        #mw.dict['statuscur']._glop='glop'
         
 def loadhelp(): #action for help button
     webbrowser.open('https://github.com/tevslin/zoomready/blob/main/README.md')
@@ -439,6 +451,7 @@ thepercentile=90
 colorset=('red','orange','yellow','')
 textset=('not connected','not zoomready','iffy','zoomready')
 suffi=("cur","lhavg","lhnadir","avg","nadir")
+sepcols=(2,5) #columns here the vertical seperator lines wil go
 
 
 killsw=False
@@ -458,7 +471,7 @@ statusgroup=(avglatency,avgjitter,avgdown,avgup,failures)
 
 avgstatus=statusblock(theop=operator.ge,levels=(2,1,0),exit=statusexit,widget='status')
 failurecount=statusblock(theop=operator.le) #only used for tracking failure counts
-cf =cloudflareclass.cloudflare(printit=False)
+cf =cloudflareclass.cloudflare(printit=False,timeout=(3.05,25))
 
 pingtasks=[('8.8.8.8',1),('1.1.1.1',1),('208.67.222.222',1)] #locations to ping and weighting
 pingqs=[[] for i in range(len(pingtasks))]
@@ -492,21 +505,24 @@ mw.addpair('ISP:',"isp",base=mw.canvas)
 mw.addpair('Connection:','conn',newrow=False,base=mw.canvas)
 mw.addpair("IP address","IP",newrow=False,base=mw.canvas)
 base,row,column=mw.getnextpos(mw.frm,True)
-ttk.Label(base,text='current').grid(row=row,column=1)
-ttk.Label(base,text='last hour').grid(row=row,column=2,columnspan=2)
-ttk.Label(base,text='since '+time.strftime('%m/%d %H:%M')).grid(row=row,column=4,columnspan=2)
+toprow=row #remeber for tsretching vertical seperators
+ttk.Label(base,text='current').grid(row=row+1,column=1)
+ttk.Label(base,text='last hour').grid(row=row,column=3,columnspan=2)
+ttk.Label(base,text='since '+time.strftime('%m/%d %H:%M')).grid(row=row,column=6,columnspan=2)
 row+=1
-ttk.Label(mw.frm,text='average').grid(row=row,column=2)
-ttk.Label(mw.frm,text='worst').grid(row=row,column=3)
-ttk.Label(mw.frm,text='average').grid(row=row,column=4)
-ttk.Label(mw.frm,text='worst').grid(row=row,column=5)
+ttk.Label(mw.frm,text='average').grid(row=row,column=3)
+ttk.Label(mw.frm,text='worst').grid(row=row,column=4)
+ttk.Label(mw.frm,text='average').grid(row=row,column=6)
+ttk.Label(mw.frm,text='worst').grid(row=row,column=7)
 mw.addrow('status')
 mw.addrow("latency")
 mw.addrow('jitter')
 mw.addrow("speed down")
 mw.addrow("speed up")
 mw.addrow('failure duration')
-
+base,row,column=mw.getnextpos(mw.frm,True) #find out where we are now
+for col in sepcols: #draw the seperato columns
+    ttk.Separator(base, orient=tk.VERTICAL).grid(column=col, row=toprow, rowspan=row-toprow, sticky='ns')
 mw.addbutton('Help',loadhelp,base=mw.canvas)
 mw.addbutton("Pause",pausetoggle,vname="pausebutton",newrow=False,col=2,base=mw.canvas)
 mw.addbutton("Quit",killall,newrow=False,col=4,base=mw.canvas)
