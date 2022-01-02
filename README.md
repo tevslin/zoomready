@@ -14,7 +14,7 @@ A desktop app designed to be run continuously to monitor the quality of your Int
 
 ### Windows
 
-To download the Windows executable, click [here](https://zoomready.s3.amazonaws.com/zoomready.exe). You may have to contend with virus blockers or Windows itself warning that the software is from an unknown publisher (me). The software has so far only been tested on Windows 10.
+To download the Windows executable, click [here](https://zoomready.s3.amazonaws.com/zoomreadysetup.exe). You may have to contend with virus blockers or Windows itself warning that the software is from an unknown publisher (me). The software has so far only been tested on Windows 10.
 
 ### Mac and Linux
 
