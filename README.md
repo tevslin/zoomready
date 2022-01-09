@@ -40,6 +40,10 @@ The Pause button causes zoomready to stop testing your connection. If your conne
 
 ### Quit
 
+### Cheat sheet
+
+Get it [here](https://zoomready.s3.amazonaws.com/zoomreadycheatsheet.html).
+
 Click the Quit button.
 
 ## How it works
@@ -66,7 +70,7 @@ Teleconferencing, as with Zoom, is an essential part of modern American life. It
 
 No claims of any sort are made for this software. It has been lightly tested on Windows 10. Use and/or redistribute solely at your own risk. No commitment is made to maintain this software. As noted above, changes made by Cloudflare or ipdatabase.com might breeak the functionality.
 
-##note: zoomready used to be zoombuddy but there is another app by that name.
+**note: zoomready used to be zoombuddy but there is another app by that name.
 
 I have no affiliation with Cloudflare, Zoom, any teleconferencing or hosting service, or any ISP (except as a customer).
 
