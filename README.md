@@ -42,6 +42,10 @@ The Pause button causes zoomready to stop testing your connection. If your conne
 
 Click the Quit button.
 
+### Cheat sheet showing display
+
+Get it [here](https://zoomready.s3.amazonaws.com/zoomreadycheatsheet.html).
+
 ## How it works
 
 Tests for latency are done by sending ping packets to Google, Cloudflare, and OpenDNS. This is a good selection for testing in the US but may not be in other countries. Currently this selection cannot be changed. Eventually there will be an opportunity to set preferences. Zoomready makes Python requests to various subaddresses of [speed.cloudflare.com](https://speed.cloudflare.com). Their API is not documented, as far as I know; and so that is a vulnerability for this code. There is also a request to [ipdatabase.com](http://www.ipdatabase.com/ip) and the return is screen-scraped for your actual ISP name.
@@ -64,9 +68,9 @@ Teleconferencing, as with Zoom, is an essential part of modern American life. It
 
 ## Disclaimers
 
-No claims of any sort are made for this software. It has been lightly tested on Windows 10. Use and/or redistribute solely at your own risk. No commitemnt is made to maintain this software. As noted above, changes made by Cloudflare or ipdatabase.com might breeak the functionality.
+No claims of any sort are made for this software. It has been lightly tested on Windows 10. Use and/or redistribute solely at your own risk. No commitment is made to maintain this software. As noted above, changes made by Cloudflare or ipdatabase.com might breeak the functionality.
 
-##note: zoomready used to be zoombuddy but there is another app by that name.
+**note: zoomready used to be zoombuddy but there is another app by that name.
 
 I have no affiliation with Cloudflare, Zoom, any teleconferencing or hosting service, or any ISP (except as a customer).
 
