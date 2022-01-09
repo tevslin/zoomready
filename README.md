@@ -40,11 +40,11 @@ The Pause button causes zoomready to stop testing your connection. If your conne
 
 ### Quit
 
-### Cheat sheet
+Click the Quit button.
+
+### Cheat sheet showing display
 
 Get it [here](https://zoomready.s3.amazonaws.com/zoomreadycheatsheet.html).
-
-Click the Quit button.
 
 ## How it works
 
