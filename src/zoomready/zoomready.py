@@ -4,7 +4,7 @@ Created on Sat Nov 13 09:49:24 2021
 
 @author: tevsl
 """
-version="1.0.0"
+version="1.0.1"
 
 import tkinter as tk
 from tkinter import ttk
@@ -16,11 +16,12 @@ import psutil
 from datetime import timedelta
 import webbrowser
 import sys
-import os  
+import os
 import warnings
 warnings.filterwarnings("ignore")
 import ping3
 ping3.EXCEPTIONS = True
+import versionutils
 from cloudflarepycli import cloudflareclass
 
 ######## Note ping3 does not work in user mode in raspberian
@@ -103,7 +104,7 @@ class statusblock:  #keeps track of a performance dimension
         
 
 class mainwindow:
-    def __init__(self,callafter,aftertime,title='Zoomready'):
+    def __init__(self,callafter,aftertime,title='zoomready'):
        
         self.root = tk.Tk()
         self.root.title(title+' '+version)
@@ -112,7 +113,7 @@ class mainwindow:
         except Exception:
             self.root.iconbitmap(os.path.join(sys._MEIPASS,'theicon.ico'))
         self.frm = ttk.Frame(self.root, padding=10)
-        self.canvas=tk.Canvas(self.root)
+        self.frm1=ttk.Frame(self.root,padding=10)    
         self.callafter=callafter
         self.aftertime=aftertime
         self.doingafter=None
@@ -137,10 +138,10 @@ class mainwindow:
 
         ttk.Label (thebase,text=label).grid(row=row,column=column,sticky='e')
         if vname is None: #if just another constant
-            ttk.Label (thebase,text=vinit).grid(row=row,column=column+1)
+            ttk.Label (thebase,text=vinit).grid(row=row,column=column+1,sticky='w')
         else:            
             self.dict[vname]=ttk.Label(thebase,text=vinit)
-            self.dict[vname].grid(row=row,column=column+1)
+            self.dict[vname].grid(row=row,column=column+1,sticky='w')
 
         #self.column+=2
         
@@ -314,19 +315,21 @@ def dospeed(curtask,index):
     #performs speedtests
     if curtask['direction']=='up':
         results=cf.upload(curtask['script'][index],1)
-        if results is None:  #allowing for bug in cloudflarecli
-            results=()
+        #if len(results)==0:  #allowing for bug in cloudflarecli
+            #return(False)
     else:   #for download
         fulltimes,servertimes,requesttimes=cf.download(curtask['script'][index],1)
-        results=fulltimes=np.subtract(fulltimes,requesttimes)
-    if len(results)==0: #if it failed
-        return(False)
+        if len(fulltimes)==0: #if it failed
+            return(False)
+        results=np.subtract(fulltimes,requesttimes)
     curtask['speeds'][index]=curtask['script'][index]*8/results[0] #update the results array
+
     if curtask['initializing']: #if still in itialization
         if index==len(curtask['speeds'])-1:  #if just filled last bucket
             curtask['initializing']=False #turn off iniialization
     if not curtask['initializing']: #if not in itialization
         speed=round(np.percentile(curtask['speeds'],thepercentile)/1e6,2)
+
         if curtask['direction']=='up': #12/18
             avgup.updateentries(speed)
         else:
@@ -363,8 +366,6 @@ def makespeeddict(functasks,direction):
 
 
 def checkstatus():
-    
-
     if killsw:  #if we're done
         return #return without rescheduling
     if not pausesw: # if not paused
@@ -399,17 +400,16 @@ def pausetoggle():  #action for pause button
     if pausesw: #if already paused
         pausesw=False #resume
         mw.setvar("pausebutton","Pause")
-        #mw.dict['statuscur'].grid()
-        #print(mw.dict['statuscur']._glop)
     else: #if not paused
         pausesw=True
         mw.setvar("pausebutton","Resume")
-        #mw.dict['statuscur'].grid_remove()
-        #mw.dict['statuscur']._glop='glop'
+        
+
         
 def loadhelp(): #action for help button
-    webbrowser.open('https://github.com/tevslin/zoomready/blob/main/README.md')
-
+    webbrowser.open('https://zoomready.s3.amazonaws.com/zoomreadycheatsheet.html')
+def loadnewversion(): #action for info button
+    webbrowser.open(vtext[3])
 
 def getisp():   #gets data for isp and exits if no ip connection
     gotit=False
@@ -471,7 +471,7 @@ statusgroup=(avglatency,avgjitter,avgdown,avgup,failures)
 
 avgstatus=statusblock(theop=operator.ge,levels=(2,1,0),exit=statusexit,widget='status')
 failurecount=statusblock(theop=operator.le) #only used for tracking failure counts
-cf =cloudflareclass.cloudflare(printit=False,timeout=(3.05,25))
+cf =cloudflareclass.cloudflare(printit=False)
 
 pingtasks=[('8.8.8.8',1),('1.1.1.1',1),('208.67.222.222',1)] #locations to ping and weighting
 pingqs=[[] for i in range(len(pingtasks))]
@@ -489,26 +489,31 @@ thequeue=[] #revolving q of tasks to schedule
 for feature, dictionary in featuredict.items():    #create a queue and thread for each feature
     thequeue.append({"name":feature,"interval":dictionary["interval"],"last":0,"index":0})
 
-
+# look for new version BEFORE setting up window
+# just assume no new version if it fails for any reason
+try:
+    newversion, vtext =versionutils.getlatestversioninfo( \
+        'https://zoomready.s3.amazonaws.com/zoombuddy_release.txt',version)
+except:
+    newversion=False
+    
         
     
 buttonignore=True #because buttons call their code during setup     
 mw=mainwindow(checkstatus,200)   #create the window
 
 
-
-
-mw.addpair('time since failure:','lastfail',base=mw.canvas)
-mw.addpair('last hour failures:','lasthour',vinit=str(0),newrow=False,base=mw.canvas)
-mw.addpair('total failures:','totfailcount',vinit=str(0),newrow=False,base=mw.canvas)
-mw.addpair('ISP:',"isp",base=mw.canvas)
-mw.addpair('Connection:','conn',newrow=False,base=mw.canvas)
-mw.addpair("IP address","IP",newrow=False,base=mw.canvas)
+mw.addpair('last hour failures:','lasthour',vinit=str(0),base=mw.frm1)
+mw.addpair('total failures:','totfailcount',vinit=str(0),newrow=False,base=mw.frm1)
+mw.addpair('time since failure:','lastfail',base=mw.frm1,newrow=False)
+mw.addpair('connection:','conn',base=mw.frm1)
+mw.addpair("IP address:","IP",newrow=False,base=mw.frm1)
+mw.addpair('ISP:',"isp",base=mw.frm1,newrow=False)
 base,row,column=mw.getnextpos(mw.frm,True)
 toprow=row #remeber for tsretching vertical seperators
-ttk.Label(base,text='current').grid(row=row+1,column=1)
-ttk.Label(base,text='last hour').grid(row=row,column=3,columnspan=2)
-ttk.Label(base,text='since '+time.strftime('%m/%d %H:%M')).grid(row=row,column=6,columnspan=2)
+ttk.Label(base,text='Current').grid(row=row,column=1,columnspan=2)
+ttk.Label(base,text='Last Hour').grid(row=row,column=3,columnspan=2)
+ttk.Label(base,text='Since '+time.strftime('%m/%d %H:%M')).grid(row=row,column=6,columnspan=2)
 row+=1
 ttk.Label(mw.frm,text='average').grid(row=row,column=3)
 ttk.Label(mw.frm,text='worst').grid(row=row,column=4)
@@ -523,14 +528,22 @@ mw.addrow('failure duration')
 base,row,column=mw.getnextpos(mw.frm,True) #find out where we are now
 for col in sepcols: #draw the seperato columns
     ttk.Separator(base, orient=tk.VERTICAL).grid(column=col, row=toprow, rowspan=row-toprow, sticky='ns')
-mw.addbutton('Help',loadhelp,base=mw.canvas)
-mw.addbutton("Pause",pausetoggle,vname="pausebutton",newrow=False,col=2,base=mw.canvas)
-mw.addbutton("Quit",killall,newrow=False,col=4,base=mw.canvas)
+if newversion: #if new vesion detected
+    base,row,column=mw.getnextpos(mw.frm1,True) #find oout where are
+
+    ttk.Label(base,text=vtext[1],background='yellow').grid(row=row,column=column,
+        columnspan=4,sticky='e')
+    ttk.Button(base,text=vtext[2],command=loadnewversion).grid( \
+        row=row,column=4,columnspan=2)
+    ttk.Label(base,text='').grid(row=row+1) #blank line
+    
+mw.addbutton('Help',loadhelp,base=mw.frm1)
+mw.addbutton("Pause",pausetoggle,vname="pausebutton",newrow=False,col=4,base=mw.frm1)
+mw.addbutton("Quit",killall,newrow=False,col=5,base=mw.frm1)
 
 
 mw.frm.grid()
-mw.canvas.grid(rowspan=6)
-
+mw.frm1.grid(rowspan=6)
 
 buttonignore=False #now buttons are good to go
 mw.doafter(aftertime=0,callafter=getisp) #get isp info before real start to test internet connection
