@@ -4,7 +4,7 @@ Created on Sat Nov 13 09:49:24 2021
 
 @author: tevsl
 """
-version="1.0.1"
+version="1.0.2"
 
 import tkinter as tk
 from tkinter import ttk
@@ -315,8 +315,8 @@ def dospeed(curtask,index):
     #performs speedtests
     if curtask['direction']=='up':
         results=cf.upload(curtask['script'][index],1)
-        #if len(results)==0:  #allowing for bug in cloudflarecli
-            #return(False)
+        if len(results)==0:  
+            return(False)
     else:   #for download
         fulltimes,servertimes,requesttimes=cf.download(curtask['script'][index],1)
         if len(fulltimes)==0: #if it failed
