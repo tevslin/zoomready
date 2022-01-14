@@ -28,7 +28,7 @@ The Python source is available from [this Github repository](https://github.com/
 
 ### Startup
 
-Use File Explorer to navigate to whereever you saved zoomready.exe during download and double click on the name of the program or right click the name and select open. There is no need to run as administrator. Note that zoomready is currently very slow to start running; be patient. If you don't see its window after a while, look for a feather icon (temporary) in the taskbar and click it to bring the window to the front. It will be running and monitoring whether it is the front window or not. You can also minimize  zoomready and it will continue monitoring,
+Use File Explorer to navigate to whereever you saved zoomreadysetup.exe during download and double click the installer or right click its name and select open. There is no need to run the installer as administrator. Note that zoomready is currently very slow to start running; be patient. If you don't see its window after a while, look for its red and green icon in the taskbar and click it to bring the window to the front. It will be running and monitoring whether it is the front window or not. You can also minimize  zoomready and it will continue monitoring,
 
 Bring the window to the front by clicking on the icon whenever you want to see the current state of your connection.
 
