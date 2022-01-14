@@ -1,5 +1,5 @@
 # zoomready
-Beta release of free app to determine and track the quality of your internet connection on a continuous basis, especially the connection's suitability for teleconferencing. 
+First release of free app to determine and track the quality of your internet connection on a continuous basis, especially the connection's suitability for teleconferencing. 
 
 ## Uses
 1. determine whether it is your connection or someone else's which is causing freezes and disconnects
@@ -8,7 +8,7 @@ Beta release of free app to determine and track the quality of your internet con
 4. determine whether a hotel connection or other temporary connection is good enough for teleconferencing
 
 ## Description
-A desktop app designed to be run continuously to monitor the quality of your Internet connection. Tracks current and average latency, jitter, and speed up and down. Indicator lights show suitability for teleconferencing. Latency must be less than 75 ms (milliseconds), jitter less than 15 ms, download speed more than 5Mbps (megabits per second), and upload more than 3Mbps to be considered fully zoomready (green). If these criteria are not met but latency is less 100ms, jitter less than 25ms, download faster than 2Mbps, and upload more than 1Mbps, the zoomready status is "iffy" (yellow). Anything else including inability to connect is status red - not usable for teleconferencing. You will usually find yourself freezing on Zoom and other teleconferencing platforms if your zoomready status is red.
+A desktop app designed to be run continuously to monitor the quality of your Internet connection. Tracks current and average latency, jitter, and speed up and down. Indicator lights show suitability for teleconferencing. Latency must be less than 75 ms (milliseconds), jitter less than 15 ms, download speed more than 5Mbps (megabits per second), and upload more than 3Mbps to be considered fully zoomready (green). If these criteria are not met but latency is less 100ms, jitter less than 25ms, download faster than 2Mbps, and upload more than 1Mbps, the zoomready status is "iffy" (yellow). Anything else short of no connection including is status orange - not zoomready. You will usually find yourself freezing on Zoom and other teleconferencing platforms if your zoomready status is orange. Status red means that there is no internet connection at all.
 
 ## Installation
 
