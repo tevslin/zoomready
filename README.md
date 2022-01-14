@@ -1,5 +1,5 @@
 # zoomready
-First release of free app to determine and track the quality of your internet connection on a continuous basis, especially the connection's suitability for teleconferencing. 
+First release of free Windows app to determine and track the quality of your internet connection on a continuous basis, especially the connection's suitability for teleconferencing. 
 
 ## Uses
 1. determine whether it is your connection or someone else's which is causing freezes and disconnects
