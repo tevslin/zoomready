@@ -34,6 +34,8 @@ def getlatestversioninfo(url,curversion,timeout=(3.03,30)):
     oldversion=parseversion(curversion)
     new=False
     for i,vers in enumerate(newversion):
+        if vers<oldversion[i]: #if newer than production
+            break #must be prerelease
         if vers>oldversion[i]:
             new=True
             break

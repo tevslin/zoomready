@@ -4,7 +4,7 @@ Created on Sat Nov 13 09:49:24 2021
 
 @author: tevsl
 """
-version="1.0.2"
+version="1.1.1"
 
 import tkinter as tk
 from tkinter import ttk
@@ -17,6 +17,7 @@ from datetime import timedelta
 import webbrowser
 import sys
 import os
+#import argparse    
 import warnings
 warnings.filterwarnings("ignore")
 import ping3
@@ -83,12 +84,13 @@ class statusblock:  #keeps track of a performance dimension
                         self.lastlevel=lastlevel #remember it
                 else: #if average
                     background=None #it doesn't have a color
-                if not self.widget is None:  #if it has a widget
-                    if self.exit is None: #if no exit
-                        mw.setvar(self.widget+suffix,"{:4.1f}".format(values[i]),background=background)
-                    else:
-                        thevalue,background=self.exit(values[i],suffix)
-                        mw.setvar(self.widget+suffix,thevalue,background=background)
+                if (time.time()-3600>starttime) or (suffix not in ["lhavg","lhnadir"]): #don't update hour until it passes
+                    if not self.widget is None:  #if it has a widget
+                        if self.exit is None: #if no exit
+                            mw.setvar(self.widget+suffix,"{:4.1f}".format(values[i]),background=background)
+                        else:
+                            thevalue,background=self.exit(values[i],suffix)
+                            mw.setvar(self.widget+suffix,thevalue,background=background)
         return (self.total/self.count)
     
     def getlevel(self,value): #get the level for a value
@@ -104,10 +106,10 @@ class statusblock:  #keeps track of a performance dimension
         
 
 class mainwindow:
-    def __init__(self,callafter,aftertime,title='zoomready'):
+    def __init__(self,callafter,aftertime,title='zoomready',subtitle=''):
        
         self.root = tk.Tk()
-        self.root.title(title+' '+version)
+        self.root.title(title+' '+version+subtitle)
         try:
             self.root.iconbitmap('theicon.ico')
         except Exception:
@@ -132,16 +134,18 @@ class mainwindow:
         column=0 if newrow else (info['column']+info['columnspan'])
         return thebase,row,column
         
-    def addpair(self,label,vname=None,vinit='N/A',newrow=True,base=None):
+    def addpair(self,label,vname=None,vinit='N/A',newrow=True,column=None,base=None):
 
-        thebase,row,column=self.getnextpos(base,newrow)
+        thebase,row,col=self.getnextpos(base,newrow)
+        if not column is None:
+            col=column
 
-        ttk.Label (thebase,text=label).grid(row=row,column=column,sticky='e')
+        ttk.Label (thebase,text=label).grid(row=row,column=col,sticky='e')
         if vname is None: #if just another constant
-            ttk.Label (thebase,text=vinit).grid(row=row,column=column+1,sticky='w')
+            ttk.Label (thebase,text=vinit).grid(row=row,column=col+1,sticky='w')
         else:            
             self.dict[vname]=ttk.Label(thebase,text=vinit)
-            self.dict[vname].grid(row=row,column=column+1,sticky='w')
+            self.dict[vname].grid(row=row,column=col+1,sticky='w')
 
         #self.column+=2
         
@@ -230,6 +234,7 @@ def updatestatus(): #updates color bar and message
     else:
         minstatus=np.min([block.lastlevel for block in statusgroup ]) #changed 12/18
     avgstatus.updateentries(minstatus)
+    mw.setvar("totduration",getduration(starttime))
 
     
 def do_ping(curtask,index):
@@ -403,16 +408,29 @@ def pausetoggle():  #action for pause button
     else: #if not paused
         pausesw=True
         mw.setvar("pausebutton","Resume")
+
+def IPtoggle(): #action for hideip button
+    global hideip  
+    if hideip: #if already hidden
+        hideip=False 
+        mw.setvar("ipbutton","Hide IP")
+        mw.setvar('IP',ip) #reset
+    else: #if not hidden
+        hideip=True
+        mw.setvar("ipbutton","Show IP")
+        mw.setvar('IP','hidden')
         
 
         
 def loadhelp(): #action for help button
-    webbrowser.open('https://zoomready.s3.amazonaws.com/zoomreadycheatsheet.html')
+    webbrowser.open('http://freecheckip.com/cheatsheet.html')
 def loadnewversion(): #action for info button
     webbrowser.open(vtext[3])
 
 def getisp():   #gets data for isp and exits if no ip connection
     gotit=False
+    global ip
+    
     while not gotit:
         try:
             colo,ip=cf.getcolo()
@@ -436,6 +454,7 @@ def getisp():   #gets data for isp and exits if no ip connection
         ctype='unknown'
     mw.setvar('conn',ctype)
     mw.doafter()
+    return
 
 # initialization
 
@@ -446,6 +465,17 @@ try:
 except:
     pass
 
+# get args - coming soon
+
+#parser=argparse.ArgumentParser(description='Runs continual speed test of net connection using ping and Cloudflare')
+#parser.add_argument('--debug',action='store_true',help='write sysout/syserr to log file')
+#parser.add_argument('--hideip',action='store_true',help='hide ip address')
+#parser.add_argument('--json',action='store_true',help='write json to sysout instead of fornmatted results')
+#args=parser.parse_args()
+
+
+
+starttime=time.time()
 speedtestinterval=15  #should come from preferance. time in minutes for full set of type of speedtest
 thepercentile=90
 colorset=('red','orange','yellow','')
@@ -456,6 +486,7 @@ sepcols=(2,5) #columns here the vertical seperator lines wil go
 
 killsw=False
 pausesw=False
+hideip=False
 failstart= 0 #any nonzero value means failure underway. blocks execution of nonping tests
 possfailstart=0 #time of last test if it failed
 failcount=0
@@ -493,14 +524,14 @@ for feature, dictionary in featuredict.items():    #create a queue and thread fo
 # just assume no new version if it fails for any reason
 try:
     newversion, vtext =versionutils.getlatestversioninfo( \
-        'https://zoomready.s3.amazonaws.com/zoombuddy_release.txt',version)
+        'http://freecheckip.com/zoomready_release.txt',version)
 except:
     newversion=False
     
         
     
 buttonignore=True #because buttons call their code during setup     
-mw=mainwindow(checkstatus,200)   #create the window
+mw=mainwindow(checkstatus,200,subtitle=' from freecheckip.com - Started: '+time.strftime('%m/%d %H:%M'))   #create the window
 
 
 mw.addpair('last hour failures:','lasthour',vinit=str(0),base=mw.frm1)
@@ -510,10 +541,11 @@ mw.addpair('connection:','conn',base=mw.frm1)
 mw.addpair("IP address:","IP",newrow=False,base=mw.frm1)
 mw.addpair('ISP:',"isp",base=mw.frm1,newrow=False)
 base,row,column=mw.getnextpos(mw.frm,True)
-toprow=row #remeber for tsretching vertical seperators
+toprow=row #remember for stretching vertical seperators
 ttk.Label(base,text='Current').grid(row=row,column=1,columnspan=2)
 ttk.Label(base,text='Last Hour').grid(row=row,column=3,columnspan=2)
-ttk.Label(base,text='Since '+time.strftime('%m/%d %H:%M')).grid(row=row,column=6,columnspan=2)
+mw.addpair("Last ","totduration", vinit='',newrow=False,column=6)
+#ttk.Label(base,text='Last '+time.strftime('%m/%d %H:%M')).grid(row=row,column=6,columnspan=2)
 row+=1
 ttk.Label(mw.frm,text='average').grid(row=row,column=3)
 ttk.Label(mw.frm,text='worst').grid(row=row,column=4)
@@ -526,10 +558,10 @@ mw.addrow("speed down")
 mw.addrow("speed up")
 mw.addrow('failure duration')
 base,row,column=mw.getnextpos(mw.frm,True) #find out where we are now
-for col in sepcols: #draw the seperato columns
+for col in sepcols: #draw the seperator columns
     ttk.Separator(base, orient=tk.VERTICAL).grid(column=col, row=toprow, rowspan=row-toprow, sticky='ns')
 if newversion: #if new vesion detected
-    base,row,column=mw.getnextpos(mw.frm1,True) #find oout where are
+    base,row,column=mw.getnextpos(mw.frm1,True) #find out where are
 
     ttk.Label(base,text=vtext[1],background='yellow').grid(row=row,column=column,
         columnspan=4,sticky='e')
@@ -538,6 +570,7 @@ if newversion: #if new vesion detected
     ttk.Label(base,text='').grid(row=row+1) #blank line
     
 mw.addbutton('Help',loadhelp,base=mw.frm1)
+mw.addbutton('Hide IP',IPtoggle,vname="ipbutton",newrow=False,col=1,base=mw.frm1)
 mw.addbutton("Pause",pausetoggle,vname="pausebutton",newrow=False,col=4,base=mw.frm1)
 mw.addbutton("Quit",killall,newrow=False,col=5,base=mw.frm1)
 
@@ -546,6 +579,7 @@ mw.frm.grid()
 mw.frm1.grid(rowspan=6)
 
 buttonignore=False #now buttons are good to go
+ip='' #ip address
 mw.doafter(aftertime=0,callafter=getisp) #get isp info before real start to test internet connection
 mw.mainloop()
 
