@@ -1,5 +1,7 @@
 # zoomready
-First release of free Windows app to determine and track the quality of your internet connection on a continuous basis, especially the connection's suitability for teleconferencing. 
+First release of free Windows app to determine and track the quality of your internet connection on a continuous basis, especially the connection's suitability for teleconferencing.
+
+Much more information available on [freecheckip.com](http://freecheckip.com).
 
 ## Uses
 1. determine whether it is your connection or someone else's which is causing freezes and disconnects
@@ -14,7 +16,9 @@ A desktop app designed to be run continuously to monitor the quality of your Int
 
 ### Windows
 
-To download the Windows installer, click [here](https://zoomready.s3.amazonaws.com/zoomreadysetup.exe). You may have to contend with virus blockers or Windows itself warning that the software is from an unknown publisher (me). The software has so far only been tested on Windows 10.
+To download the Windows installer, click [here](http://freecheckip.com/zoomreadysetup.exe). You may have to contend with virus blockers or Windows itself warning that the software is from an unknown publisher (me). The software has so far only been tested on Windows 10.
+
+
 
 ### Mac and Linux
 
