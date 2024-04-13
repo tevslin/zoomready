@@ -1,4 +1,4 @@
-# DEPRECATED NO LONGER SUPPORTED AND WOULD NEED UPDATES TO WOR RIGH
+# DEPRECATED NO LONGER SUPPORTED AND WOULD NEED UPDATES TO WORK RIGHR
 
 # zoomready
 First release of free Windows app to determine and track the quality of your internet connection on a continuous basis, especially the connection's suitability for teleconferencing.
